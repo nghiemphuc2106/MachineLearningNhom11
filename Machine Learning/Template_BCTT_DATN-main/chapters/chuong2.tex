@@ -1,0 +1,208 @@
+\chapter[THIẾT KẾ GIẢI PHÁP, QUY TRÌNH HỌC MÁY VÀ PHÂN TÍCH MÃ NGUỒN]{THIẾT KẾ GIẢI PHÁP, QUY TRÌNH HỌC MÁY VÀ PHÂN TÍCH MÃ NGUỒN}
+
+\section{Sơ đồ tổng thể pipeline học máy và chống rò rỉ dữ liệu}
+
+\subsection{Kiến trúc Pipeline học máy tổng quát}
+Tuân thủ quy trình thực hiện chung đối với dữ liệu dạng bảng tại Mục 5.1 của Hướng dẫn học phần FIT4013, nhóm thiết kế một pipeline học máy khép kín từ dữ liệu thô đến bước đánh giá và phân tích lỗi, được trình bày tại Sơ đồ~\ref{sodo:pipeline}.
+
+\begin{sodo}[H]
+\noindent
+\begin{tikzpicture}[
+    node distance=0.45cm and 0.45cm,
+    box/.style={rectangle, draw=blue!70!black, fill=blue!5, thick, text width=2.75cm, minimum height=1.35cm, align=center, rounded corners=3pt, font=\bfseries\fontsize{13pt}{15pt}\selectfont},
+    stream/.style={rectangle, draw=orange!80!black, fill=orange!8, thick, text width=4.35cm, minimum height=1.55cm, align=center, rounded corners=3pt, font=\fontsize{13pt}{15pt}\selectfont},
+    arrow/.style={-{Stealth[length=2.2mm]}, thick, draw=gray!80!black}
+]
+    \node[box] (raw) {Dữ liệu thô\\(1,470 $\times$ 35)};
+    \node[box, right=of raw] (split) {Chia 80/20\\Train: 1,176\\Test: 294};
+    \node[stream, above right=-0.2cm and 0.45cm of split] (streamA) {\textbf{Luồng A (Cơ bản)}\\Bỏ 4 cột dư + OneHot\\+ \textit{StandardScaler} (44 chiều)};
+    \node[stream, below right=-0.2cm and 0.45cm of split] (streamB) {\textbf{Luồng B (Cải tiến)}\\8 đặc trưng HR + \textit{RobustScaler}\\+ \textit{SelectKBest}};
+    \node[box, right=5.15cm of split, text width=3.15cm] (models) {Huấn luyện\\1. K-NN\\2. Gaussian NB\\3. Decision Tree\\4. Random Forest};
+    \node[box, below=0.55cm of models, text width=3.15cm] (eval) {Đánh giá \& Lỗi\\F1, Recall, AUC\\Confusion Matrix};
+
+    \draw[arrow] (raw) -- (split);
+    \draw[arrow] (split.east) -- ++(0.2,0) |- (streamA.west);
+    \draw[arrow] (split.east) -- ++(0.2,0) |- (streamB.west);
+    \draw[arrow] (streamA.east) -- ++(0.2,0) |- (models.west);
+    \draw[arrow] (streamB.east) -- ++(0.2,0) |- (models.west);
+    \draw[arrow] (models) -- (eval);
+\end{tikzpicture}
+\SodoCaption{Kiến trúc Pipeline học máy so sánh Luồng A (Cơ bản) và Luồng B (Cải tiến)}{Nhóm thực hiện tự xây dựng}
+\label{sodo:pipeline}
+\end{sodo}
+
+\subsection{Chiến lược chia dữ liệu và cơ chế chống rò rỉ dữ liệu (Data Leakage)}
+Một trong những yêu cầu bắt buộc quan trọng nhất của học phần là \textit{``Dữ liệu huấn luyện và dữ liệu kiểm thử phải được tách đúng quy trình. Các bước học tham số từ dữ liệu phải được học trên tập huấn luyện để hạn chế data leakage''}. Nhóm đảm bảo nguyên tắc này thông qua ba cơ chế kỹ thuật:
+\begin{enumerate}
+    \item \textbf{Chia tách phân tầng ngay từ đầu (\textit{Stratified Train/Test Split})}: Trước khi thực hiện bất kỳ phép biến đổi số học nào, toàn bộ $1,470$ bản ghi được chia thành tập Huấn luyện (\textit{X\_train, y\_train}: $1,176$ mẫu, chiếm $80\%$) và tập Kiểm thử độc lập (\textit{X\_test, y\_test}: $294$ mẫu, chiếm $20\%$) với tham số phân tầng \textit{stratify = y} và hạt giống ngẫu nhiên \textit{random\_state = 42}. Nhờ vậy, tập Train chứa $986$ mẫu \textit{No} ($83.84\%$) và $190$ mẫu \textit{Yes} ($16.16\%$); tập Test chứa $247$ mẫu \textit{No} ($84.01\%$) và $47$ mẫu \textit{Yes} ($15.99\%$).
+    \item \textbf{Đóng gói toàn bộ biến đổi trong \textit{scikit-learn Pipeline}}: Tất cả các bước tính trung bình và độ lệch chuẩn (\textit{StandardScaler}), trung vị và khoảng tứ phân vị (\textit{RobustScaler}), danh sách nhãn phân loại (\textit{OneHotEncoder}) và điểm thống kê kiểm định $F$-test (\textit{SelectKBest}) đều được đặt bên trong đối tượng \textit{Pipeline}. Khi gọi hàm huấn luyện trên tập \textit{X\_train}, chỉ dữ liệu của $1,176$ mẫu huấn luyện được sử dụng để ước lượng tham số; tập \textit{X\_test} chỉ đi qua phép biến đổi (\textit{transform}) khi dự đoán.
+    \item \textbf{Kiểm định chéo phân tầng (\textit{5-Fold Stratified Cross-Validation})}: Khi đánh giá độ ổn định và chọn siêu tham số trên tập Train, mỗi vòng lặp của bộ kiểm định chéo $5$-Fold phân tầng (với \textit{n\_splits = 5}, \textit{shuffle = True}, \textit{random\_state = 42}) tự động khớp lại bộ tiền xử lý trên $4$ fold huấn luyện ($940$ mẫu) và kiểm định trên $1$ fold đánh giá ($236$ mẫu), ngăn chặn hoàn toàn việc rò rỉ thông tin giữa các fold.
+\end{enumerate}
+
+\section{Thiết kế hai luồng tiền xử lý và kỹ thuật đặc trưng}
+
+\subsection{Luồng A: Pipeline cơ bản (Baseline Data Preparation)}
+Luồng A đóng vai trò là cấu hình xử lý dữ liệu chuẩn mực tối thiểu để làm mốc đối sánh:
+\begin{itemize}
+    \item \textbf{Xử lý cột dư thừa}: Loại bỏ $3$ cột hằng số (\textit{EmployeeCount}, \textit{Over18}, \textit{StandardHours}) và $1$ cột định danh nhân viên (\textit{EmployeeNumber}).
+    \item \textbf{Mã hóa biến phân loại}: Áp dụng bộ mã hóa \textit{OneHotEncoder} (với cấu hình loại bỏ cột đầu tiên \textit{drop = 'first'} và bỏ qua nhãn lạ \textit{handle\_unknown = 'ignore'}) cho $7$ cột chuỗi phân loại (\textit{BusinessTravel}, \textit{Department}, \textit{EducationField}, \textit{Gender}, \textit{JobRole}, \textit{MaritalStatus}, \textit{OverTime}). Tùy chọn \textit{drop = 'first'} giúp loại bỏ sự phụ thuộc tuyến tính hoàn toàn (bẫy biến giả -- \textit{dummy variable trap}) bằng cách biểu diễn một biến phân loại có $C$ nhãn thành $C-1$ cột nhị phân.
+    \item \textbf{Chuẩn hóa đặc trưng số}: Áp dụng bộ chuẩn hóa \textit{StandardScaler} đưa $23$ cột số về trung bình $\mu = 0$ và phương sai $\sigma^2 = 1$:
+    \[
+        z_{ij} = \frac{x_{ij} - \hat{\mu}_j}{\hat{\sigma}_j}
+    \]
+    Sau khi đi qua bộ biến đổi cột (\textit{ColumnTransformer}) của Luồng A, mỗi mẫu dữ liệu được biểu diễn thành một vector \textbf{44 chiều}.
+\end{itemize}
+
+\subsection{Luồng B: Pipeline cải tiến (Domain Feature Engineering \& Robust Preprocessing)}
+Khắc phục các hạn chế của dữ liệu thô đã chỉ ra ở Chương 1 (ngoại lệ lệch phải, biến nhiễu ngẫu nhiên, đa cộng tuyến và thiếu các tương tác phi tuyến), Luồng B thực hiện ba cải tiến kỹ thuật đồng bộ:
+
+\subsubsection{1. Tạo 8 đặc trưng nghiệp vụ nhân sự mới (Feature Engineering)}
+Bảng~\ref{tab:dac-trung-moi} trình bày công thức toán học, hệ số tương quan với nhãn mục tiêu trên tập Train và ý nghĩa quản trị của $8$ đặc trưng mới do nhóm thiết kế trong lớp \textit{HRFeatureEngineer}.
+
+\begin{table}[H]
+\caption{Danh sách 8 đặc trưng mới được tạo trong Luồng B và hệ số tương quan với Attrition}
+\label{tab:dac-trung-moi}
+\noindent
+\begin{tabularx}{\textwidth}{|L{3.5cm}|L{4.8cm}|c|Y|}
+\hline
+\textbf{Tên đặc trưng mới} & \textbf{Công thức tính toán} & \textbf{Corr ($r$)} & \textbf{Giả thuyết và ý nghĩa HR} \\
+\hline
+\textit{OverTime\_\allowbreak Single\_Risk} & $\mathbb{I}(\text{OT}=\text{Yes}) \cdot \mathbb{I}(\text{Single})$ & $+0.2951$ & Nhân viên độc thân phải làm thêm giờ có rủi ro nhảy việc cao nhất. \\
+\hline
+\textit{OverTime\_\allowbreak LowSat\_Risk} & $\mathbb{I}(\text{OT}=\text{Yes}) \cdot \mathbb{I}(\text{TotalSat} \le 2.5)$ & $+0.2651$ & Quá tải giờ làm kết hợp với sự bất mãn về môi trường làm việc. \\
+\hline
+\textit{JobHoppingRate} & $\text{NumCompanies} / (\text{TotalYears} + 1)$ & $+0.2075$ & Tần suất chuyển việc lịch sử trên mỗi năm đi làm. \\
+\hline
+\textit{NewHireRisk} & $\mathbb{I}(\text{YearsCty} \le 2 \lor \text{YearsRole} \le 1)$ & $+0.1971$ & Rủi ro sốc văn hóa ở giai đoạn thử việc / mới nhận vị trí. \\
+\hline
+\textit{TotalSatisfaction} & $(\text{EnvSat} + \text{JobSat} + \text{RelSat} + \text{WLB})/4$ & $-0.1945$ & Chỉ số hài lòng tổng thể, giảm nhiễu phương sai từng câu hỏi lẻ. \\
+\hline
+\textit{CommuteBurden} & $\text{Distance} \cdot (1 + \mathbb{I}(\text{OT}=\text{Yes}))$ & $+0.1636$ & Gánh nặng đi lại tăng gấp đôi khi nhân viên phải về muộn do tăng ca. \\
+\hline
+\textit{IncomePer\allowbreak WorkingYear} & $\text{MonthlyIncome} / (\text{TotalYears} + 1)$ & $-0.0725$ & Mức đãi ngộ tương đối trên mỗi năm tích lũy kinh nghiệm. \\
+\hline
+\textit{StagnationRatio} & $\text{YearsNoPromo} / (\text{YearsCty} + 1)$ & $+0.0445$ & Tỷ lệ thời gian dậm chân tại chỗ chưa được thăng tiến. \\
+\hline
+\end{tabularx}
+\Nguon{Nhóm thực hiện thiết kế và tính toán trên tập huấn luyện ($N_{\text{train}} = 1,176$)}
+\end{table}
+
+Đáng chú ý, hai đặc trưng tương tác \textit{OverTime\_Single\_Risk} ($r = +0.2951$) và \textit{OverTime\_LowSat\_Risk} ($r = +0.2651$) đạt hệ số tương quan với \textit{Attrition} cao hơn bất kỳ đặc trưng gốc nào trong bộ dữ liệu (biến gốc mạnh nhất là \textit{TotalWorkingYears} chỉ đạt $|r| = 0.1711$).
+
+\subsubsection{2. Loại bỏ các biến nhiễu và đa cộng tuyến}
+Ngoài $4$ cột hằng số/định danh như Luồng A, Luồng B loại bỏ thêm $5$ cột gây hại cho mô hình:
+\begin{itemize}
+    \item Ba cột tỷ lệ lương ngẫu nhiên \textit{DailyRate}, \textit{HourlyRate}, \textit{MonthlyRate} (có tương quan $\approx 0$ với mục tiêu và làm nhiễu khoảng cách K-NN).
+    \item Hai cột đa cộng tuyến mạnh: \textit{JobLevel} (tương quan $r = 0.95$ với \textit{MonthlyIncome}) và \textit{PercentSalaryHike} (tương quan $r = 0.77$ với \textit{PerformanceRating}), giúp giảm hiện tượng nhân trùng lặp bằng chứng trong Gaussian Naive Bayes.
+\end{itemize}
+
+\subsubsection{3. Chuẩn hóa kháng ngoại lệ bằng RobustScaler và Chọn lọc đặc trưng}
+\begin{itemize}
+    \item Thay vì dùng trung bình và độ lệch chuẩn, \textit{RobustScaler} chuẩn hóa các đặc trưng số theo trung vị ($\text{median}$) và khoảng tứ phân vị ($\text{IQR} = Q_{75} - Q_{25}$):
+    \[
+        x'_{ij} = \frac{x_{ij} - \text{median}(x_j)}{Q_{75}(x_j) - Q_{25}(x_j)}
+    \]
+    giúp phân phối của \textit{MonthlyIncome} và \textit{IncomePerWorkingYear} không bị bóp méo bởi một số ít Giám đốc có thu nhập gần $20,000$ USD.
+    \item Đối với thuật toán dựa trên khoảng cách (K-NN) và rừng ngẫu nhiên, bước chọn lọc đặc trưng \textit{SelectKBest} (sử dụng hàm kiểm định phương sai ANOVA \textit{f\_classif} với $k = 15$) giúp giữ lại đúng $15$ chiều có giá trị thống kê $F$-value cao nhất trên tập Train, loại bỏ hoàn toàn các chiều nhị phân thưa ít thông tin.
+\end{itemize}
+
+\section{Mô tả các thuật toán học máy và siêu tham số}
+
+\subsection{Thuật toán K-Nearest Neighbors (K-NN)}
+K-NN là thuật toán học lười (\textit{lazy learning}) phi tham số: để dự đoán nhãn của mẫu kiểm thử $\mathbf{x}_*$, thuật toán tìm tập $N_k(\mathbf{x}_*)$ gồm $k$ điểm trong tập huấn luyện có khoảng cách gần $\mathbf{x}_*$ nhất. Nhóm khảo sát hai công thức khoảng cách thuộc họ Minkowski:
+\begin{itemize}
+    \item \textbf{Khoảng cách Euclidean ($p=2$, mặc định ở Baseline)}: $d_2(\mathbf{u}, \mathbf{v}) = \sqrt{\sum_{j=1}^D (u_j - v_j)^2}$.
+    \item \textbf{Khoảng cách Manhattan ($p=1$, ở cấu hình Tuned)}: $d_1(\mathbf{u}, \mathbf{v}) = \sum_{j=1}^D |u_j - v_j|$, vốn ít bị ảnh hưởng bởi các chiều ngoại lệ trong không gian nhiều chiều hơn so với $L_2$.
+    \item \textbf{Trọng số biểu quyết (\textit{weights})}: So sánh giữa \textit{uniform} (mỗi láng giềng 1 phiếu bằng nhau) và \textit{distance} (trọng số tỷ lệ nghịch với khoảng cách $w_i = 1 / d(\mathbf{x}_*, \mathbf{x}_i)$, giúp các láng giềng rất gần thuộc lớp thiểu số \textit{Yes} không bị lấn át bởi các điểm lớp \textit{No} ở xa).
+\end{itemize}
+
+\subsection{Thuật toán Gaussian Naive Bayes (GNB)}
+Gaussian Naive Bayes tính xác suất hậu nghiệm của lớp $c \in \{0, 1\}$ theo định lý Bayes với giả định các đặc trưng độc lập có điều kiện:
+\[
+    P(y = c \mid \mathbf{x}) \propto P(y = c) \prod_{j=1}^{D} \frac{1}{\sqrt{2\pi \tilde{\sigma}_{jc}^2}} \exp\left( -\frac{(x_j - \mu_{jc})^2}{2\tilde{\sigma}_{jc}^2} \right)
+\]
+trong đó $\tilde{\sigma}_{jc}^2 = \sigma_{jc}^2 + \varepsilon \cdot \max_{k}(\sigma_k^2)$ là phương sai đã được làm trơn bởi siêu tham số \textbf{\textit{var\_smoothing} ($\varepsilon$)}.
+\begin{itemize}
+    \item Ở cấu hình mặc định ($\varepsilon = 10^{-9}$), các biến nhị phân hiếm sau One-Hot Encoding (ví dụ \textit{JobRole = Research Director} ở lớp \textit{Yes}) có phương sai $\sigma_{jc}^2 \approx 0$, khiến hàm mật độ xác suất bị cực đoan hóa.
+    \item Khi tinh chỉnh $\varepsilon = 0.1$, một lượng phương sai nền đồng nhất được cộng thêm vào mọi đặc trưng, đóng vai trò như phép điều chuẩn (\textit{regularization}) giúp ổn định tỷ số hợp lý (\textit{likelihood ratio}) và giảm mạnh số ca báo động giả (FP).
+\end{itemize}
+
+\subsection{Thuật toán Cây quyết định (Decision Tree -- CART) và Mở rộng Random Forest}
+\begin{itemize}
+    \item \textbf{Decision Tree Classifier}: Xây dựng cây nhị phân bằng cách chọn đặc trưng $j$ và ngưỡng cắt $t$ tại mỗi nút nhằm cực tiểu hóa độ tạp chất Gini có trọng số:
+    \[
+        G(Q_m) = 1 - \sum_{c \in \{0,1\}} p_{mc}^2
+    \]
+    Với dữ liệu mất cân bằng $83.9\% : 16.1\%$, cây mặc định (không giới hạn độ sâu \textit{max\_depth = None}) sẽ sinh ra cây rất sâu để học thuộc lòng từng điểm nhiễu nhưng thiên lệch về lớp đa số. Do đó, ở cấu hình Tuned, nhóm sử dụng độ sâu tối đa \textit{max\_depth = 4}, số mẫu tối thiểu tại lá \textit{min\_samples\_leaf = 15} kết hợp cân bằng trọng số lớp \textbf{\textit{class\_weight = 'balanced'}} (tự động gán trọng số lớp $w_c = \frac{N}{2 N_c}$, tức lớp \textit{Yes} có trọng số gấp $\approx 5.2$ lần lớp \textit{No}).
+    \item \textbf{Kỹ thuật mở rộng -- Random Forest Classifier}: Kết hợp $200$ cây quyết định độc lập (\textit{n\_estimators = 200}, \textit{max\_depth = 7}, \textit{min\_samples\_leaf = 5}, \textit{class\_weight = 'balanced'}) được huấn luyện trên các mẫu bootstrap và tập con đặc trưng ngẫu nhiên ($\sqrt{D}$), giúp giảm phương sai dự đoán và nâng cao diện tích dưới đường cong ROC-AUC.
+\end{itemize}
+
+\section{Phân tích cấu trúc mã nguồn và chức năng các module}
+
+\subsection{Tổ chức thư mục và chức năng từng tệp chương trình}
+Bảng~\ref{tab:cau-truc-ma-nguon} mô tả chi tiết cấu trúc các module trong kho mã nguồn của nhóm.
+
+\begin{table}[H]
+\caption{Cấu trúc các module mã nguồn và chức năng tương ứng trong dự án}
+\label{tab:cau-truc-ma-nguon}
+\noindent
+\begin{tabularx}{\textwidth}{|L{4.2cm}|L{3.1cm}|Y|}
+\hline
+\textbf{Đường dẫn tệp / Thư mục} & \textbf{Loại thành phần} & \textbf{Chức năng chính} \\
+\hline
+\textit{src/pipeline.py} & Module lõi Python & Định nghĩa lớp \textit{HRFeatureEngineer}, hàm chia dữ liệu phân tầng \textit{load\_and\_split\_data} và hàm tạo \textit{Pipeline} cho Luồng A, Luồng B. \\
+\hline
+\textit{run\_experiments.py} & Script thực nghiệm & Chạy tự động toàn bộ EDA, huấn luyện $13$ cấu hình mô hình, xuất $9$ biểu đồ PNG, lưu mô hình \textit{.pkl} và trích xuất mẫu lỗi FN/FP. \\
+\hline
+\textit{notebooks/HR\_Employee\_\allowbreak Attrition\_Pipeline.ipynb} & Jupyter Notebook & Trình bày tương tác từng bước phân tích dữ liệu, so sánh Luồng A/B, trực quan hóa kết quả và thảo luận lỗi. \\
+\hline
+\textit{app.py} & Web App Demo & Ứng dụng giao diện đồ họa cho phép nhập hồ sơ nhân viên, dự đoán xác suất nghỉ việc theo thời gian thực trên cả $4$ mô hình. \\
+\hline
+\textit{outputs/figures/*.png} & Biểu đồ đầu ra & Lưu trữ $9$ biểu đồ độ phân giải $200$ DPI phục vụ báo cáo và trình chiếu. \\
+\hline
+\textit{outputs/results/*.csv} & Dữ liệu kết quả & Lưu bảng điểm \textit{experiment\_summary.csv} và danh sách các bản ghi dự đoán sai \textit{error\_analysis\_FN/FP.csv}. \\
+\hline
+\textit{README.md, requirements.txt, AI\_USAGE.md} & Tài liệu tái lập & Hướng dẫn cài đặt môi trường, lệnh chạy tái tạo kết quả và khai báo liêm chính học thuật về sử dụng AI. \\
+\hline
+\end{tabularx}
+\Nguon{Nhóm thực hiện tổng hợp}
+\end{table}
+
+\subsection{Phân tích đoạn mã nguồn cốt lõi xây dựng Pipeline Luồng A và Luồng B}
+Đoạn mã dưới đây trích từ tệp \textit{src/pipeline.py}, minh họa cách nhóm cài đặt lớp \textit{HRFeatureEngineer} và đóng gói thành \textit{Pipeline} chuẩn mực không gây rò rỉ dữ liệu:
+
+\begin{lstlisting}[caption={Định nghĩa lớp HRFeatureEngineer và hàm khởi tạo Luồng B trong src/pipeline.py}]
+class HRFeatureEngineer(BaseEstimator, TransformerMixin):
+    def __init__(self, drop_noisy=True):
+        self.drop_noisy = drop_noisy
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        X['TotalSatisfaction'] = (
+            X['EnvironmentSatisfaction'] + X['JobSatisfaction'] +
+            X['RelationshipSatisfaction'] + X['WorkLifeBalance']
+        ) / 4.0
+        X['IncomePerWorkingYear'] = X['MonthlyIncome'] / (X['TotalWorkingYears'] + 1.0)
+        X['StagnationRatio'] = X['YearsSinceLastPromotion'] / (X['YearsAtCompany'] + 1.0)
+        X['JobHoppingRate'] = X['NumCompaniesWorked'] / (X['TotalWorkingYears'] + 1.0)
+        X['NewHireRisk'] = (
+            (X['YearsAtCompany'] <= 2) | (X['YearsInCurrentRole'] <= 1)
+        ).astype(int)
+
+        ot_bin = (X['OverTime'] == 'Yes').astype(int)
+        single_bin = (X['MaritalStatus'] == 'Single').astype(int)
+        X['OverTime_Single_Risk'] = ot_bin * single_bin
+        X['OverTime_LowSat_Risk'] = ot_bin * (X['TotalSatisfaction'] <= 2.5).astype(int)
+        X['CommuteBurden'] = X['DistanceFromHome'] * (1 + ot_bin)
+
+        cols_to_drop = list(DROP_COLS_BASIC)
+        if self.drop_noisy:
+            cols_to_drop += [
+                'DailyRate', 'HourlyRate', 'MonthlyRate',
+                'JobLevel', 'PercentSalaryHike'
+            ]
+        return X.drop(columns=[c for c in cols_to_drop if c in X.columns])
+\end{lstlisting}

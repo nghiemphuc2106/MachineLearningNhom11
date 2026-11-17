@@ -1,0 +1,18 @@
+\UnnumberedChapter{LỜI MỞ ĐẦU}
+
+Trong kỷ nguyên chuyển đổi số và quản trị doanh nghiệp dựa trên dữ liệu (\textit{Data-driven Management}), nguồn nhân lực luôn được xem là tài sản cốt lõi quyết định năng lực cạnh tranh của mọi tổ chức. Tuy nhiên, tình trạng nhân viên nghỉ việc tự nguyện (\textit{Employee Attrition}) đang đặt ra bài toán chi phí đầy thách thức: doanh nghiệp không chỉ tốn kém ngân sách tuyển dụng, đào tạo lại mà còn chịu tổn thất về tiến độ dự án và sự gắn kết nội bộ. Việc ứng dụng các thuật toán Học máy (\textit{Machine Learning}) để dự đoán sớm khả năng nghỉ việc của nhân viên từ dữ liệu hồ sơ nhân sự giúp bộ phận Quản trị Nhân sự (HR) chuyển đổi từ thế bị động sang chủ động giữ chân nhân tài.
+
+Xuất phát từ ý nghĩa thực tiễn đó, nhóm thực hiện \textbf{Đề tài 13: ``Dự đoán nhân viên có khả năng nghỉ việc''} trong khuôn khổ Bài tập lớn học phần \textbf{Nhập môn Học máy (FIT4013)}. Mục tiêu của đề tài là xây dựng một quy trình học máy hoàn chỉnh, minh bạch và có khả năng tái lập cao trên bộ dữ liệu \textit{IBM HR Analytics Employee Attrition \& Performance} (gồm $1,470$ nhân viên với $35$ thuộc tính), tuân thủ nghiêm ngặt các yêu cầu kỹ thuật của học phần:
+\begin{itemize}
+    \item Thực hiện khám phá và phân tích dữ liệu (EDA) chuyên sâu để nhận diện sự mất cân bằng lớp ($83.88\%$ ở lại so với $16.12\%$ nghỉ việc), các biến hằng số, biến định danh, ngoại lệ (\textit{outliers}) và hiện tượng đa cộng tuyến.
+    \item Thiết kế và đối sánh hai luồng chuẩn bị dữ liệu độc lập từ cùng dữ liệu thô: \textbf{Luồng A (Pipeline cơ bản)} và \textbf{Luồng B (Pipeline cải tiến)} với $8$ đặc trưng nghiệp vụ nhân sự mới nhằm kiểm chứng tác động của kỹ thuật đặc trưng (\textit{Feature Engineering}) lên hiệu năng mô hình.
+    \item Huấn luyện, tinh chỉnh siêu tham số và so sánh có hệ thống ba thuật toán trọng tâm của học phần (\textbf{K-Nearest Neighbors}, \textbf{Gaussian Naive Bayes}, \textbf{Decision Tree}) cùng kỹ thuật mở rộng \textbf{Random Forest Ensemble}.
+    \item Đánh giá đa chiều qua các độ đo phù hợp với dữ liệu mất cân bằng (\textit{Precision}, \textit{Recall}, \textit{F1-score}, \textit{ROC-AUC}, \textit{Confusion Matrix}) và phân tích chi tiết các trường hợp dự đoán sai (\textit{False Negatives} và \textit{False Positives}).
+\end{itemize}
+
+Báo cáo được cấu trúc thành $3$ chương nội dung chính theo đúng trình tự $6$ phần bắt buộc của hướng dẫn bài tập lớn FIT4013:
+\begin{itemize}
+    \item \textbf{Chương 1}: Đặt vấn đề, phân tích yêu cầu và khám phá dữ liệu (EDA).
+    \item \textbf{Chương 2}: Thiết kế giải pháp, quy trình học máy và phân tích mã nguồn.
+    \item \textbf{Chương 3}: Thử nghiệm, đánh giá kết quả, thảo luận so sánh và phân tích lỗi.
+\end{itemize}

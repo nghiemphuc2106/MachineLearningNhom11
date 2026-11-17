@@ -1,0 +1,11 @@
+EmployeeNumber,Age,JobRole,MonthlyIncome,OverTime,MaritalStatus,TotalWorkingYears,YearsAtCompany,JobSatisfaction,EnvironmentSatisfaction,DistanceFromHome,Actual,Predicted,Prob_Yes
+58,41,Research Director,19545,No,Married,23,22,3,2,12,1,0,0.0
+165,58,Healthcare Representative,10312,No,Married,40,40,4,4,23,1,0,0.0
+1572,53,Manufacturing Director,10169,No,Married,34,33,4,3,2,1,0,0.0
+1098,44,Human Resources,10482,No,Married,24,20,1,2,1,1,0,0.0008
+1691,48,Sales Representative,2655,Yes,Married,19,9,3,4,7,1,0,0.005
+1081,51,Research Scientist,2461,Yes,Married,18,10,3,1,4,1,0,0.0085
+1389,31,Manufacturing Director,6179,Yes,Married,10,10,3,4,22,1,0,0.0087
+780,33,Research Scientist,2686,Yes,Single,10,10,4,4,1,1,0,0.0094
+179,51,Manufacturing Director,10650,No,Single,18,4,4,1,8,1,0,0.0114
+300,29,Research Scientist,2058,No,Single,7,6,3,3,1,1,0,0.0364

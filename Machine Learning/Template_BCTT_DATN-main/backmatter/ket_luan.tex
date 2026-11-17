@@ -1,0 +1,29 @@
+\UnnumberedChapter{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+
+\section*{1. Tóm tắt các kết quả chính đạt được}
+Qua quá trình thực hiện bài tập lớn học phần \textbf{Nhập môn Học máy (FIT4013)} với \textbf{Đề tài 13: Dự đoán nhân viên có khả năng nghỉ việc}, nhóm đã hoàn thành toàn bộ các mục tiêu đề ra về mặt kiến thức và kỹ năng:
+\begin{itemize}
+    \item \textbf{Khám phá dữ liệu (EDA) toàn diện}: Đã phân tích sâu cấu trúc $1,470$ mẫu $\times 35$ thuộc tính của bộ dữ liệu IBM HR Analytics, chỉ ra tỷ lệ mất cân bằng lớp $83.88\% : 16.12\%$, nhận diện $4$ cột hằng số/định danh cần loại bỏ, $3$ cột tỷ lệ lương ngẫu nhiên gây nhiễu khoảng cách và các cặp biến đa cộng tuyến mạnh ($r = 0.95$).
+    \item \textbf{Chứng minh hiệu quả của Pipeline cải tiến (Luồng B)}: Việc thiết kế bộ biến đổi \textit{HRFeatureEngineer} tạo ra $8$ đặc trưng nghiệp vụ nhân sự mới (đặc biệt là \textit{OverTime\_Single\_Risk}, \textit{OverTime\_LowSat\_Risk}, \textit{TotalSatisfaction}), kết hợp chuẩn hóa kháng ngoại lệ \textit{RobustScaler} và lọc đặc trưng \textit{SelectKBest}, đã giúp cải thiện hiệu năng trên toàn bộ các thuật toán so với Luồng A (Pipeline cơ bản):
+    \begin{itemize}
+        \item \textbf{K-Nearest Neighbors (Tuned)}: \textit{F1-score} tăng từ $0.1132$ lên \textbf{0.2903} (\textbf{+156.4\%}), \textit{Precision} đạt \textbf{60.00\%}.
+        \item \textbf{Decision Tree (Tuned)}: \textit{F1-score} tăng từ $0.3529$ lên \textbf{0.4160} (\textbf{+17.9\%}), \textit{Recall} đạt \textbf{55.32\%}.
+        \item \textbf{Gaussian Naive Bayes (Tuned, $\varepsilon = 0.1$)}: Đạt hiệu năng xuất sắc nhất toàn bộ thực nghiệm với \textbf{\textit{F1-score} $= 0.5714$} (\textbf{+36.5\%} so với Luồng A), \textbf{\textit{Accuracy} $= 85.71\%$}, \textbf{\textit{Recall} $= 59.57\%$}, \textbf{\textit{Precision} $= 54.90\%$} và \textbf{\textit{CV ROC-AUC} $= 0.8007$}.
+    \end{itemize}
+    \item \textbf{Hoàn thiện kỹ thuật mở rộng và ứng dụng thực tiễn}: Nhóm đã triển khai thêm mô hình học kết hợp \textbf{Random Forest Ensemble} ($\text{Test AUC} = 0.7607$) và xây dựng ứng dụng \textbf{Web App Demo (\textit{app.py})} hỗ trợ bộ phận Nhân sự dự đoán trực quan nguy cơ nghỉ việc và đề xuất giải pháp giữ chân nhân viên theo thời gian thực.
+\end{itemize}
+
+\section*{2. Khuyến nghị ứng dụng cho quản trị nhân sự và hướng phát triển}
+\begin{enumerate}
+    \item \textbf{Khuyến nghị chính sách quản trị nhân sự từ kết quả mô hình}:
+    \begin{itemize}
+        \item \textit{Kiểm soát khối lượng làm thêm giờ (\textit{OverTime})}: Nhóm nhân viên làm thêm giờ có tỷ lệ nghỉ việc cao gấp $3$ lần ($30.53\%$ so với $10.44\%$). Doanh nghiệp cần giới hạn trần tăng ca liên tiếp và bổ sung cơ chế nghỉ bù hoặc phụ cấp thỏa đáng, đặc biệt ở bộ phận \textit{Sales Representative} và \textit{Laboratory Technician}.
+        \item \textit{Chăm sóc nhóm nhân sự trẻ trong 2 năm đầu (\textit{NewHireRisk})}: Tổ chức các buổi trao đổi định kỳ 1-1 (\textit{Stay Interview}) cho các nhân viên dưới $25$ tuổi, độc thân, mới gia nhập công ty dưới $2$ năm có điểm hài lòng môi trường làm việc $\le 2$.
+    \end{itemize}
+    \item \textbf{Hướng phát triển kỹ thuật trong tương lai}:
+    \begin{itemize}
+        \item \textit{Tinh chỉnh ngưỡng xác suất theo chi phí (\textit{Cost-sensitive Thresholding})}: Hạ ngưỡng phân lớp từ $\tau = 0.50$ xuống $\tau = 0.35$ khi doanh nghiệp muốn ưu tiên tối đa hóa \textit{Recall} (bắt được $>75\%$ nhân sự có ý định nghỉ việc).
+        \item \textit{Kết hợp lấy mẫu cân bằng SMOTE/ENN bên trong Pipeline}: Thử nghiệm \textit{SMOTE-ENN} riêng cho K-NN để cải thiện mật độ láng giềng lớp thiểu số.
+        \item \textit{Tích hợp SHAP Values}: Hiển thị mức đóng góp cụ thể của từng yếu tố lên quyết định dự đoán của từng cá nhân trên giao diện Web App Demo.
+    \end{itemize}
+\end{enumerate}

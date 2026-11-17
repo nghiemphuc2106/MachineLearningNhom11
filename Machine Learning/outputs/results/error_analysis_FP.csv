@@ -1,0 +1,11 @@
+EmployeeNumber,Age,JobRole,MonthlyIncome,OverTime,MaritalStatus,TotalWorkingYears,YearsAtCompany,JobSatisfaction,EnvironmentSatisfaction,DistanceFromHome,Actual,Predicted,Prob_Yes
+1839,18,Research Scientist,1514,No,Single,0,0,3,2,14,0,1,0.9957
+411,18,Sales Representative,1200,No,Single,0,0,3,4,10,0,1,0.9904
+1893,26,Research Scientist,2933,Yes,Married,1,1,3,2,1,0,1,0.9533
+22,22,Laboratory Technician,2935,Yes,Divorced,1,1,4,4,16,0,1,0.9504
+144,22,Laboratory Technician,2871,No,Single,1,0,4,2,15,0,1,0.8878
+2040,35,Human Resources,8837,Yes,Single,9,9,4,3,26,0,1,0.8828
+1961,38,Sales Representative,2858,No,Single,20,1,1,1,1,0,1,0.8265
+1173,24,Laboratory Technician,3597,No,Single,6,4,2,4,24,0,1,0.8131
+1190,32,Sales Representative,2827,No,Divorced,1,1,1,3,2,0,1,0.8105
+434,27,Research Scientist,2478,Yes,Single,4,4,2,3,5,0,1,0.7944

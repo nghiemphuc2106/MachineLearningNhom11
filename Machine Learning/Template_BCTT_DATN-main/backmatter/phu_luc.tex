@@ -1,0 +1,20 @@
+\appendix
+\UnnumberedChapter{PHỤ LỤC}
+
+\section*{Phụ lục 1. Hướng dẫn chạy chương trình và tái lập kết quả}
+Để tái tạo toàn bộ kết quả thực nghiệm, biểu đồ và chạy thử nghiệm ứng dụng Web App Demo của nhóm, giảng viên và người đọc có thể thực hiện theo $3$ bước sau tại thư mục gốc của dự án:
+\begin{enumerate}
+    \item \textbf{Cài đặt các thư viện phụ thuộc}:
+    \begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+    \end{lstlisting}
+    \item \textbf{Chạy kịch bản tái lập toàn bộ Pipeline (Luồng A, Luồng B, 9 biểu đồ và lưu mô hình)}:
+    \begin{lstlisting}[language=bash]
+python run_experiments.py
+    \end{lstlisting}
+    \item \textbf{Khởi chạy ứng dụng Web App Demo dự đoán nghỉ việc tương tác}:
+    \begin{lstlisting}[language=bash]
+python app.py
+# Sau do mo trinh duyet truy cap: http://127.0.0.1:5000
+    \end{lstlisting}
+\end{enumerate}
